@@ -8,13 +8,6 @@ from discord.ext import commands
 # TODOS:
 # - add a disconnect function to cleanly close the db and whatever
 # - add a way for the bot to decrement a member's count if their message is deleted by an admin
-# - add a column tracking the "running count" required for plugs
-# - add a way reset the running count when a member shares a link
-#     > how do we handle non links ie just general chit chat in the channel?
-# - only count messages that are in specific channels
-#   > blacklist: fishing, memes, server-history, misc-bot, misc-voice, time-out
-#   > or rather, add a command to set the specific feedback and plug channels
-#   > and perhaps onyl count messages over a certain char length. 10?
 
 # Table "member_stats":
 #    id: INT PRIMARY KEY -> id refers to the discord unique id
@@ -42,7 +35,7 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
+    if message.author == bot.user or message.author.bot:
         return
 
     urls = find_urls(message.content)
@@ -52,7 +45,7 @@ async def on_message(message):
     print(f'Attachments: {message.attachments}')
     print(f'Flags: {message.flags}')
     print(f'URLs: {urls}')
-
+    print(f'Author Roles: {message.author.roles}')
     print('')
 
     # Add the member to the DB if they dont exist
@@ -67,11 +60,20 @@ async def on_message(message):
     if len(message.content) > 10:
         # print('Message longer than 10 characters. Adding plug credit.')
         add_plug_credit(message.author.id)
-
-    # Remove links from inactive members
-    if len(urls) > 0 and member_tup[1] < 20:
-        await message.channel.send(f'You do not have permission to send links in this server, {message.author.mention}. You must participate in discussion more before you can send links.')
-        await message.delete()
+    
+    # Handle links
+    if len(urls) > 0 and message.channel.name != 'feedback':
+        if message.channel.name == 'shameless-self-plug' and member_tup[2] < 20:
+            await message.channel.send(f'You have already met your plug quota to post links in this channel, {message.author.mention}. Please chat a bit more before reposting in this channel.')
+            await message.delete()
+            return
+        elif message.channel.name == 'shameless-self-plug' and member_tup[2] >= 20:
+            reset_plug_credits(message.author.id)
+            return
+        elif not any(role.name in ('Regulars', 'badmin') for role in message.author.roles) and member_tup[1] < 20:
+            await message.channel.send(f'You do not yet have permission to send links in this channel, {message.author.mention}. You must chat a bit more before you are allowed to send links.')
+            await message.delete()
+            return
 
     await bot.process_commands(message)
 
@@ -84,8 +86,7 @@ async def stats(ctx):
         plug_access = row_tup[2] > 20
         await ctx.send(f'You have sent {row_tup[1]} messages since I started counting. Plug access: {plug_access}')
 
-@bot.command(name='test')
-@commands.has_role('badmin')
+@bot.command(name='ping')
 async def test(ctx):
     await ctx.send(f'{ctx.message.author.mention}')
 
@@ -102,22 +103,20 @@ def fetch_member(id):
     return row_tup
 
 def insert_member(id):
-    cur = con.cursor()
-
-    cur.execute(f'insert into {MEMBER_STATS_TABLE} values ({id}, 1, 0, 0)')
-    con.commit()
-    cur.close()
+    db_execute(f'insert into {MEMBER_STATS_TABLE} values ({id}, 1, 0, 0)')
 
 def incrememt_message_count(id):
-    cur = con.cursor()
-
-    cur.execute(f'update {MEMBER_STATS_TABLE} set {COL_MESSAGE_COUNT} = {COL_MESSAGE_COUNT} + 1 where id = {id}')
-    con.commit()
-    cur.close()
+    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_MESSAGE_COUNT} = {COL_MESSAGE_COUNT} + 1 where id = {id}')
 
 def add_plug_credit(id):
+    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_PLUG_CREDITS} = {COL_PLUG_CREDITS} + 1 where id = {id}')
+
+def reset_plug_credits(id):
+    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_PLUG_CREDITS} = 0 where id = {id}')
+
+def db_execute(command):
     cur = con.cursor()
-    cur.execute(f'update {MEMBER_STATS_TABLE} set {COL_PLUG_CREDITS} = {COL_PLUG_CREDITS} + 1 where id = {id}')
+    cur.execute(command)
     con.commit()
     cur.close()
 
