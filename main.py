@@ -2,19 +2,24 @@ import discord
 import sys
 import sqlite3
 import re
-
+import subprocess
+import random
 from discord.ext import commands
 
 # TODOS:
 # - add a disconnect function to cleanly close the db and whatever
 # - add a way for the bot to decrement a member's count if their message is deleted by an admin
+# - add a config file so that the hardcoded values in this script can be changed by an admin
+# - add some sort of module system to the design so that the bot can be organized
+# - add logging
+# - add a system for handling beat battles
+# - add a system for properly communicating when bepis is pinged (perhaps a model trained from the server itself?)
 
 # Table "member_stats":
 #    id: INT PRIMARY KEY -> id refers to the discord unique id
 #    total_messages: INT NOT NULL
 #    plug_credits: INT NOT NULL
 #    feedback_credits: INT NOT NULL
-
 
 
 # Globals
@@ -43,9 +48,8 @@ async def on_message(message):
     print(f'Reference: {message.reference}')
     print(f'Embeds: {message.embeds}')
     print(f'Attachments: {message.attachments}')
-    print(f'Flags: {message.flags}')
     print(f'URLs: {urls}')
-    print(f'Author Roles: {message.author.roles}')
+    print(f'Mentions: {message.mentions}')
     print('')
 
     # Add the member to the DB if they dont exist
@@ -54,12 +58,6 @@ async def on_message(message):
         print(f'{message.author.id} was not found in the database. Adding.')
         insert_member(message.author.id)
         member_tup = (message.author.id, 1, 0, 0) # overwriting the row variable, as it would be None otherwise
-    
-    # Update stats
-    incrememt_message_count(message.author.id)
-    if len(message.content) > 10:
-        # print('Message longer than 10 characters. Adding plug credit.')
-        add_plug_credit(message.author.id)
     
     # Handle links
     if len(urls) > 0 and message.channel.name != 'feedback':
@@ -73,6 +71,21 @@ async def on_message(message):
         elif not any(role.name in ('Regulars', 'badmin') for role in message.author.roles) and member_tup[1] < 20:
             await message.channel.send(f'You do not yet have permission to send links in this channel, {message.author.mention}. You must chat a bit more before you are allowed to send links.')
             await message.delete()
+            return
+   
+    # Update stats
+    incrememt_message_count(message.author.id)
+    if len(message.content) > 10:
+        # print('Message longer than 10 characters. Adding plug credit.')
+        add_plug_credit(message.author.id)
+
+    if bot.user in message.mentions:
+        if 'wisdom' in message.content.lower():
+            res = subprocess.run(['fortune'], stdout=subprocess.PIPE) # what do you mean its broken? it works on MY machine
+            await message.channel.send(res.stdout.decode('utf-8'))
+            return
+        else:
+            await message.channel.send(get_default_reply())
             return
 
     await bot.process_commands(message)
@@ -90,11 +103,32 @@ async def stats(ctx):
 async def test(ctx):
     await ctx.send(f'{ctx.message.author.mention}')
 
+@bot.command(name='r', help='Adds a reply to my list of default replies when I am pinged without context.')
+async def add_reply(ctx, *reply):
+    r = ' '.join(reply)
+    
+    cur = con.cursor()
+    cur.execute('select * from replies where reply = ?', (r,))
+    row = cur.fetchone()
+    cur.close()
+    
+    if len(find_urls(r)) > 0:
+        await ctx.message.delete(delay=2.0)
+        await ctx.send(f'Your inclusion of a link displeases me. I cannot allow this travesty.', delete_after=5.0, mention_author=True)
+    elif row != None and tuple(row)[0].lower() == r.lower():
+        await ctx.message.delete(delay=2.0)
+        await ctx.send(f'I already know this reply.', delete_after=5.0, mention_author=True)
+    else:
+        # sanitize??
+        add_default_reply(r)
+        await ctx.message.delete(delay=2.0)
+        await ctx.send('Cool. Added a default reply when I am pinged.', delete_after=5.0, mention_author=True)
+
 
 def fetch_member(id):
     cur = con.cursor()
 
-    cur.execute(f'select * from {MEMBER_STATS_TABLE} where id = {id}')
+    cur.execute(f'select * from {MEMBER_STATS_TABLE} where id = {id};')
     row = cur.fetchone()
     cur.close()
     
@@ -103,21 +137,33 @@ def fetch_member(id):
     return row_tup
 
 def insert_member(id):
-    db_execute(f'insert into {MEMBER_STATS_TABLE} values ({id}, 1, 0, 0)')
+    db_execute(f'insert into {MEMBER_STATS_TABLE} values ({id}, 0, 0, 0);')
 
 def incrememt_message_count(id):
-    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_MESSAGE_COUNT} = {COL_MESSAGE_COUNT} + 1 where id = {id}')
+    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_MESSAGE_COUNT} = {COL_MESSAGE_COUNT} + 1 where id = {id};')
 
 def add_plug_credit(id):
-    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_PLUG_CREDITS} = {COL_PLUG_CREDITS} + 1 where id = {id}')
+    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_PLUG_CREDITS} = {COL_PLUG_CREDITS} + 1 where id = {id};')
 
 def reset_plug_credits(id):
-    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_PLUG_CREDITS} = 0 where id = {id}')
+    db_execute(f'update {MEMBER_STATS_TABLE} set {COL_PLUG_CREDITS} = 0 where id = {id};')
 
 def db_execute(command):
     cur = con.cursor()
     cur.execute(command)
     con.commit()
+    cur.close()
+
+def get_default_reply():
+    cur = con.cursor()
+    cur.execute('select * from replies order by random() limit 1;')
+    row = cur.fetchone()
+    cur.close()
+    return tuple(row)[0]
+
+def add_default_reply(r):
+    cur = con.cursor()
+    cur.execute('insert into replies (reply) values (?)', (r,)) # supposedly guards against injection? Also this (r,) syntax was the cause of some fucking headaches
     cur.close()
 
 def find_urls(content):
