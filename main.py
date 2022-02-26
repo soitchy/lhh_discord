@@ -62,14 +62,14 @@ async def on_message(message):
     # Handle links
     if len(urls) > 0 and message.channel.name != 'feedback':
         if message.channel.name == 'shameless-self-plug' and member_tup[2] < 20:
-            await message.channel.send(f'You have already met your plug quota to post links in this channel, {message.author.mention}. Please chat a bit more before reposting in this channel.')
+            await message.channel.send(f'You have already met your plug quota to post links in this channel, {message.author.mention}. Please chat a bit more before reposting in this channel.', delete_after=5.0)
             await message.delete()
             return
         elif message.channel.name == 'shameless-self-plug' and member_tup[2] >= 20:
             reset_plug_credits(message.author.id)
             return
         elif not any(role.name in ('Regulars', 'badmin') for role in message.author.roles) and member_tup[1] < 20:
-            await message.channel.send(f'You do not yet have permission to send links in this channel, {message.author.mention}. You must chat a bit more before you are allowed to send links.')
+            await message.channel.send(f'You do not yet have permission to send links in this channel, {message.author.mention}. You must chat a bit more before you are allowed to send links.', delete_after=5.0)
             await message.delete()
             return
    
@@ -81,8 +81,7 @@ async def on_message(message):
 
     if bot.user in message.mentions:
         if 'wisdom' in message.content.lower():
-            res = subprocess.run(['fortune'], stdout=subprocess.PIPE) # what do you mean its broken? it works on MY machine
-            await message.channel.send(res.stdout.decode('utf-8'))
+            await message.channel.send('I no longer have any wisdom to share')
             return
         else:
             await message.channel.send(get_default_reply())
