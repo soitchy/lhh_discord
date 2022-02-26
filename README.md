@@ -15,12 +15,35 @@ sqlite3, discord
  - add a system for properly communicating when bepis is pinged (perhaps a model trained from the server itself?)
 
 ## Database Info:
-
+```
  Table "member_stats":
     id: INT PRIMARY KEY -> id refers to the discord unique id
-    total_messages: INT NOT NULL
-    plug_credits: INT NOT NULL
-    feedback_credits: INT NOT NULL
-
+    total_messages: INT NOT NULL -> the total number of messages this member has sent
+    plug_credits: INT NOT NULL -> the total number of messages over a certain character threshold
+    feedback_credits: INT NOT NULL -> currently not used
+```
 ## Creating a test database
 
+Using sqlite3, we will create a test database in a db subdirectory:
+```
+mkdir db
+cd db
+sqlite3 lhh.db
+```
+
+After running the above, you should be in sqlite's interactive console.
+
+Create the main member stats table:
+```
+create table member_states (
+  id INT PRIMARY KEY NOT NULL,
+  total_messages INT NOT NULL,
+  plug_credits INT NOT NULL,
+  feedback_credits INT NOT NULL
+) 
+```
+
+You can then quit the interactive console with:
+```
+quit
+```
