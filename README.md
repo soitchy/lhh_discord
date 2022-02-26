@@ -13,6 +13,8 @@ sqlite3, discord
  - add logging
  - add a system for handling beat battles
  - add a system for properly communicating when bepis is pinged (perhaps a model trained from the server itself?)
+ - add a system for adding roles automatically to users via reactions (like the reaction roles bot)
+ - add a system to backup pins in channels to the history channel (like the passel bot)
 
 ## Database Info:
 ```
