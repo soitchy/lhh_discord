@@ -4,9 +4,6 @@ import random
 
 
 class Scraper:
-    def __init__(self):
-        pass
-    
     def main(self):
         page = requests.get("https://www.goodreads.com/quotes")
         soup = BeautifulSoup(page.text, 'html.parser')
