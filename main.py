@@ -5,6 +5,7 @@ import re
 import subprocess
 import random
 from discord.ext import commands
+import quote_scraper
 
 # TODOS:
 # - add a disconnect function to cleanly close the db and whatever
@@ -101,6 +102,10 @@ async def stats(ctx):
 @bot.command(name='ping')
 async def test(ctx):
     await ctx.send(f'{ctx.message.author.mention}')
+
+@bot.command(name='wisdom')
+async def wisdom(ctx):
+    await ctx.send(quote_scraper.quote)
 
 @bot.command(name='r', help='Adds a reply to my list of default replies when I am pinged without context.')
 async def add_reply(ctx, *reply):
