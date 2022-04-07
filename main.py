@@ -82,7 +82,7 @@ async def on_message(message):
 
     if bot.user in message.mentions:
         if 'wisdom' in message.content.lower():
-            await message.channel.send('I no longer have any wisdom to share')
+            await message.channel.send(quote_scraper.quote)
             return
         else:
             await message.channel.send(get_default_reply())
@@ -102,10 +102,6 @@ async def stats(ctx):
 @bot.command(name='ping')
 async def test(ctx):
     await ctx.send(f'{ctx.message.author.mention}')
-
-@bot.command(name='wisdom')
-async def wisdom(ctx):
-    await ctx.send(quote_scraper.quote)
 
 @bot.command(name='r', help='Adds a reply to my list of default replies when I am pinged without context.')
 async def add_reply(ctx, *reply):
