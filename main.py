@@ -6,6 +6,7 @@ import subprocess
 import random
 from discord.ext import commands
 import quote_scraper
+import thememzking_collector
 
 # TODOS:
 # - add a disconnect function to cleanly close the db and whatever
@@ -124,6 +125,10 @@ async def add_reply(ctx, *reply):
         await ctx.message.delete(delay=2.0)
         await ctx.send('Cool. Added a default reply when I am pinged.', delete_after=5.0, mention_author=True)
 
+@bot.command(name='memzq', help='Returns a random quote from thememzking')
+async def return_memz_quote(ctx):
+    memz_quote = thememzking_collector.return_quote()
+    await ctx.send(memz_quote)
 
 def fetch_member(id):
     cur = con.cursor()
