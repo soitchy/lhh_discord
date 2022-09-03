@@ -1,5 +1,4 @@
 import discord
-import pandas as pd
 import random
 
 quotes_file = open("lhh_discord/thememzking_quotes.csv", "a")
@@ -11,7 +10,7 @@ client = discord.Client()
 @client.event
 async def on_message(msg):
     if msg.author.id == thememzking_id:  # if from thememzking
-        await add_to_df(msg)
+        add_to_df(msg)
 
 def add_to_df(msg):
     quotes_file.writerow(msg)
