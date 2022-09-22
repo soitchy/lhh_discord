@@ -117,12 +117,12 @@ async def add_reply(ctx, *reply):
         await ctx.message.delete(delay=2.0)
         await ctx.send(f'Your inclusion of a link displeases me. I cannot allow this travesty.', delete_after=5.0, mention_author=True)
     elif row != None and tuple(row)[0].lower() == r.lower():
-        await ctx.message.delete(delay=2.0)
+        await ctx.message.delete(delay=1.0)
         await ctx.send(f'I already know this reply.', delete_after=5.0, mention_author=True)
     else:
         # sanitize??
         add_default_reply(r)
-        await ctx.message.delete(delay=2.0)
+        await ctx.message.delete(delay=1.0)
         await ctx.send('Cool. Added a default reply when I am pinged.', delete_after=5.0, mention_author=True)
 
 @bot.command(name='memzq', help='Returns a random quote from thememzking')
