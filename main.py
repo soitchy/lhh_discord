@@ -5,6 +5,8 @@ import re
 import subprocess
 import random
 from discord.ext import commands
+import quote_scraper
+import thememzking_collector
 
 # TODOS:
 # - add a disconnect function to cleanly close the db and whatever
@@ -81,7 +83,7 @@ async def on_message(message):
 
     if bot.user in message.mentions:
         if 'wisdom' in message.content.lower():
-            await message.channel.send('I no longer have any wisdom to share')
+            await message.channel.send(quote_scraper.quote)
             return
         else:
             await message.channel.send(get_default_reply())
@@ -115,14 +117,18 @@ async def add_reply(ctx, *reply):
         await ctx.message.delete(delay=2.0)
         await ctx.send(f'Your inclusion of a link displeases me. I cannot allow this travesty.', delete_after=5.0, mention_author=True)
     elif row != None and tuple(row)[0].lower() == r.lower():
-        await ctx.message.delete(delay=2.0)
+        await ctx.message.delete(delay=1.0)
         await ctx.send(f'I already know this reply.', delete_after=5.0, mention_author=True)
     else:
         # sanitize??
         add_default_reply(r)
-        await ctx.message.delete(delay=2.0)
+        await ctx.message.delete(delay=1.0)
         await ctx.send('Cool. Added a default reply when I am pinged.', delete_after=5.0, mention_author=True)
 
+@bot.command(name='memzq', help='Returns a random quote from thememzking')
+async def return_memz_quote(ctx):
+    memz_quote = thememzking_collector.return_quote()
+    await ctx.send(memz_quote)
 
 def fetch_member(id):
     cur = con.cursor()
